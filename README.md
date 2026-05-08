@@ -12,7 +12,7 @@ vagrant ssh-config >> ~/.ssh/config
 ### Ansible
 ```terminal
 ansible all -i ansible/inventory.ini -m ping
-``
+```
 ```terminal
 ansible-playbook -i ansible/inventory.ini ansible/main.yaml
 ```
