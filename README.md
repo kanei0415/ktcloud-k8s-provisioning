@@ -6,7 +6,7 @@ vagrant up --provider vmware_desktop
 vagrant destroy -f
 ```
 ```terminal
-vagrant ssh-config >> ~/.ssh/config
+vagrant ssh-config > ~/.ssh/config
 ```
 
 ### Ansible
