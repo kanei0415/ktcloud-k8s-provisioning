@@ -84,7 +84,7 @@
         spec:
           project: default
           source:
-            repoURL: https://github.com/kanei0415/ktcloud-k8s-argocd-manifest.git
+            repoURL: https://github.com/kanei0415/ktcloud-local-argocd-manifest.git
             targetRevision: HEAD
             path: Setup
           destination:
@@ -96,6 +96,7 @@
               selfHeal: true
             syncOptions:
               - CreateNamespace=true
+              - SkipDryRunOnMissingResource=true
         EOF
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
