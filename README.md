@@ -21,3 +21,8 @@ ansible-playbook -i ansible/inventory.ini ansible/main.yaml
 ```terminal
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
 ```
+
+### MasterNode
+```terminal
+vagrant ssh k8s-master
+```
