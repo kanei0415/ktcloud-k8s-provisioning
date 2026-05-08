@@ -1,0 +1,16 @@
+- name: Prepare NFS Clients (K8s Nodes)
+  hosts: workers
+  become: true
+  tasks:
+    - name: Ensure nfs-utils is running
+      service:
+        name: nfs-utils
+        state: started
+        enabled: true
+
+    - name: NFS Mount
+      mount:
+        path: /mnt/nfs/kubedata
+        src: "{{ hostvars['nfs-server']['ansible_host'] | default('nfs-server') }}:/srv/nfs/kubedata"
+        fstype: nfs
+        state: mounted

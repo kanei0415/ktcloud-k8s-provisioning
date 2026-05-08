@@ -1,0 +1,6 @@
+ssh_config
+generate_inventory.py
+
+.ansible
+
+.vagrant

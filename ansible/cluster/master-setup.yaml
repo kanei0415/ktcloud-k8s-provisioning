@@ -1,0 +1,76 @@
+- name: Initialize Kubernetes Master Node
+  hosts: master
+  become: true
+  vars:
+    pod_network_cidr: "10.244.0.0/16"
+    ansible_user_id: "vagrant"
+
+  tasks:
+    - name: Check if Kubernetes is already initialized
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: kube_init_check
+
+    - name: Kubeadm Init
+      ansible.builtin.shell: |
+        kubeadm init --pod-network-cidr={{ pod_network_cidr }} --ignore-preflight-errors=NumCPU
+      when: not kube_init_check.stat.exists
+      register: kubeadm_init_output
+
+    - name: Create .kube directory for User
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user_id }}/.kube"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+
+    - name: Copy admin.conf to User's kube config
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ ansible_user_id }}/.kube/config"
+        remote_src: true
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: "0600"
+
+    - name: Install Tigera Calico Operator
+      ansible.builtin.shell: |
+        kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/tigera-operator.yaml
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user_id }}/.kube/config"
+      register: operator_output
+      failed_when:
+        - operator_output.rc != 0
+        - "'already exists' not in operator_output.stderr"
+
+    - name: Download Calico Custom Resources Template
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/custom-resources.yaml
+        dest: /tmp/calico-custom-resources.yaml
+
+    - name: Set Pod Network CIDR in Custom Resources
+      ansible.builtin.replace:
+        path: /tmp/calico-custom-resources.yaml
+        regexp: "cidr: 192.168.0.0/16"
+        replace: "cidr: {{ pod_network_cidr }}"
+
+    - name: Apply Calico Custom Resources
+      ansible.builtin.shell: |
+        kubectl create -f /tmp/calico-custom-resources.yaml
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user_id }}/.kube/config"
+      register: cr_output
+      failed_when:
+        - cr_output.rc != 0
+        - "'already exists' not in cr_output.stderr"
+
+    - name: Wait for Calico pods to be ready
+      ansible.builtin.shell: |
+        kubectl wait --namespace calico-system \
+        --for=condition=ready pod \
+        --selector=all \
+        --timeout=300s
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user_id }}/.kube/config"
+      ignore_errors: true

@@ -1,0 +1,3 @@
+- ansible.builtin.import_playbook: cluster/main.yaml
+- ansible.builtin.import_playbook: nfs/main.yaml
+- ansible.builtin.import_playbook: argocd/main.yaml

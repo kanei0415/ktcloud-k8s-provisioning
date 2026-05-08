@@ -1,0 +1,3 @@
+- ansible.builtin.import_playbook: k8s-node-setup.yaml
+- ansible.builtin.import_playbook: master-setup.yaml
+- ansible.builtin.import_playbook: worker-join.yaml

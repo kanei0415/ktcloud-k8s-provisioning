@@ -1,0 +1,32 @@
+- name: Configure NFS Server
+  hosts: nfs
+  become: true
+  vars:
+    share_path: "/srv/nfs/kubedata"
+    allow_network: "192.168.241/24"
+
+  tasks:
+    - name: Create shared directory
+      ansible.builtin.file:
+        path: "{{ share_path }}"
+        state: directory
+        mode: "0777"
+        owner: nobody
+        group: nobody
+
+    - name: Configure /etc/exports
+      ansible.builtin.lineinfile:
+        path: /etc/exports
+        line: "{{ share_path }} *(rw,sync,no_subtree_check,no_root_squash)"
+        create: true
+      notify: Export NFS shares
+
+    - name: Enable and start nfs-server
+      ansible.builtin.service:
+        name: nfs-server
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Export NFS shares
+      ansible.builtin.command: exportfs -ra

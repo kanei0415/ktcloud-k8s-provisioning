@@ -1,0 +1,14 @@
+- name: Install NFS Utils on All Nodes
+  hosts: all
+  become: true
+  tasks:
+    - name: Install nfs-utils
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: present
+
+    - name: Enable and start rpcbind
+      ansible.builtin.service:
+        name: rpcbind
+        state: started
+        enabled: true

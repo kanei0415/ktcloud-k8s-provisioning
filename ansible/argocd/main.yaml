@@ -1,0 +1,101 @@
+- name: Setup ArgoCD on Local Kubernetes
+  hosts: master
+  become: false
+  vars:
+    ansible_user_id: "vagrant"
+    ansible_python_interpreter: /usr/bin/python3.9
+    kubeconfig_path: "/home/vagrant/.kube/config"
+
+  tasks:
+    - name: Download Helm Binary
+      ansible.builtin.get_url:
+        url: "https://get.helm.sh/helm-v3.14.0-linux-arm64.tar.gz"
+        dest: /tmp/helm.tar.gz
+
+    - name: Unarchive Helm Binary
+      ansible.builtin.unarchive:
+        src: /tmp/helm.tar.gz
+        dest: /tmp
+        remote_src: true
+
+    - name: Move Helm to /usr/bin
+      become: true
+      ansible.builtin.copy:
+        src: /tmp/linux-arm64/helm
+        dest: /usr/bin/helm
+        mode: "0755"
+        remote_src: true
+
+    - name: Install Python pip (AlmaLinux)
+      become: true
+      ansible.builtin.dnf:
+        name: python3-pip
+        state: present
+
+    - name: Install kubernetes python library
+      become: true
+      ansible.builtin.pip:
+        name:
+          - kubernetes
+          - PyYAML
+
+    - name: Add ArgoCD Helm Repository
+      kubernetes.core.helm_repository:
+        name: argo
+        repo_url: "https://argoproj.github.io/argo-helm"
+
+    - name: Update Helm Repositories
+      ansible.builtin.command: helm repo update
+
+    - name: Install ArgoCD via Helm
+      kubernetes.core.helm:
+        name: argocd
+        chart_ref: argo/argo-cd
+        release_namespace: "argocd"
+        create_namespace: true
+        wait: true
+        kubeconfig: "{{ kubeconfig_path }}"
+        values:
+          server:
+            service:
+              type: NodePort
+              nodePorts:
+                http: 30080
+            extraArgs:
+              - --insecure
+
+    - name: Verify ArgoCD CRD Installation
+      ansible.builtin.shell: "kubectl get crd applications.argoproj.io"
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: crd_check
+      until: crd_check.rc == 0
+      retries: 10
+      delay: 5
+
+    - name: Create ArgoCD Root Application (Using Shell)
+      ansible.builtin.shell: |
+        kubectl apply -f - <<EOF
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: root-app
+          namespace: argocd
+        spec:
+          project: default
+          source:
+            repoURL: https://github.com/kanei0415/ktcloud-k8s-argocd-manifest.git
+            targetRevision: HEAD
+            path: Setup
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: default
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+        EOF
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"

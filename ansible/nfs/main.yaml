@@ -1,0 +1,3 @@
+- ansible.builtin.import_playbook: nfs-setup.yaml
+- ansible.builtin.import_playbook: nfs-server.yaml
+- ansible.builtin.import_playbook: nfs-client.yaml
