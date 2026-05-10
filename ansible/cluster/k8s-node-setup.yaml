@@ -9,6 +9,21 @@
         state: present
       loop: "{{ groups['all'] }}"
 
+    - name: Prohibit Network Manager overwrite resolv.conf
+      ini_file:
+        path: /etc/NetworkManager/NetworkManager.conf
+        section: main
+        option: dns
+        value: none
+        state: present
+      register: nm_config
+
+    - name: restart NetworkManager
+      systemd:
+        name: NetworkManager
+        state: restarted
+      when: nm_config.changed
+
     - name: Force DNS to Google
       become: true
       ansible.builtin.shell: |

@@ -3,6 +3,11 @@ Vagrant.configure("2") do |config|
 
   config.vm.network "public_network"
 
+  config.vm.provider :vmware_desktop do |vmware|
+    vmware.vmx["ethernet0.pcislotnumber"] = "160"
+    vmware.vmx["ethernet1.pcislotnumber"] = "224"
+  end
+
   config.vm.define "k8s-master" do |master|
     master.vm.hostname = "k8s-master"
     

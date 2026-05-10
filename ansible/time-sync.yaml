@@ -1,0 +1,46 @@
+- name: Sync time and recover services on all nodes
+  hosts: all
+  become: true
+  tasks:
+    - name: 1. Ensure chrony is installed
+      dnf:
+        name: chrony
+        state: present
+
+    - name: 2. Set timezone to Asia/Seoul
+      timezone:
+        name: Asia/Seoul
+
+    - name: 3. Add Google and Pool NTP servers to chrony config
+      lineinfile:
+        path: /etc/chrony.conf
+        line: "server {{ item }} iburst"
+        state: present
+      with_items:
+        - "pool.ntp.org"
+        - "time.google.com"
+
+    - name: 4. Restart chronyd to apply new settings and sync time
+      systemd:
+        name: chronyd
+        state: restarted
+        enabled: true
+
+    - name: 5. Force step the system clock if the error is too large
+      command: chronyc -a makestep
+
+    - name: 6. Sync hardware clock to system time
+      command: hwclock -w
+
+    - name: 7. Get current system date
+      command: date
+      register: node_time
+
+    - name: 8. Display synchronized time for verification
+      debug:
+        msg: "Node [{{ inventory_hostname }}] current time is: {{ node_time.stdout }}"
+
+    - name: 9. Restart kubelet to refresh expired auth tokens
+      systemd:
+        name: kubelet
+        state: restarted
