@@ -10,12 +10,18 @@ vagrant ssh-config > ~/.ssh/config
 ```
 ```terminal
 vagrant halt
-```
-```terminal
+
 vagrant provision
+
+vagrant status
+```
+
+### Ansible
+```terminal
+ansible all -i ansible/inventory.ini -m ping
 ```
 ```terminal
-vagrant status
+ansible-playbook -i ansible/inventory.ini ansible/main.yaml
 ```
 
 ### Calico
@@ -50,17 +56,9 @@ IPv6 BGP status
 No IPv6 peers found.
 ```
 
-### Ansible
-```terminal
-ansible all -i ansible/inventory.ini -m ping
-```
-```terminal
-ansible-playbook -i ansible/inventory.ini ansible/main.yaml
-```
-
 ### ArgoCD
 ```terminal
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
 ```
 ```terminal
 kubectl delete ns argocd
@@ -76,6 +74,7 @@ argocd version --client
 ```terminal
 vagrant ssh k8s-master
 ```
+
 ### Time Sync
 ```terminal
 kubectl logs -n tigera-operator -l k8s-app=tigera-operato
@@ -87,4 +86,9 @@ ansible-playbook -i ansible/inventory.ini ansible/time-sync.yaml
 kubectl delete pod -n tigera-operator -l k8s-app=tigera-operator
 kubectl delete lease operator-lock -n tigera-operator
 kubectl delete pod -n calico-system --all
+```
+
+### NFSProvisioner
+```terminal
+kubectl patch pv pv-nfs-provisioner-nfs-subdir-external-provisioner -p '{"metadata":{"finalizers":null}}' --type merge
 ```
